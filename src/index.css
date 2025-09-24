@@ -2,95 +2,128 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Drone Swarm Visualization Design System - High-tech, Sci-fi Aesthetic
+All colors MUST be HSL for consistency.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core Background & Surface */
+    --background: 220 20% 6%;
+    --foreground: 210 40% 98%;
+    --surface: 220 15% 8%;
+    --surface-elevated: 220 15% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Card & Modal Surfaces */
+    --card: 220 15% 10%;
+    --card-foreground: 210 40% 95%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 40% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Primary Neon Blue (Main UI) */
+    --primary: 200 100% 60%;
+    --primary-foreground: 220 20% 6%;
+    --primary-glow: 200 100% 70%;
+    --primary-dim: 200 60% 40%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Secondary Neon Purple (Accents) */
+    --secondary: 280 100% 70%;
+    --secondary-foreground: 220 20% 6%;
+    --secondary-glow: 280 100% 80%;
+    --secondary-dim: 280 60% 50%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Accent Neon Green (Success/Active) */
+    --accent: 140 100% 60%;
+    --accent-foreground: 220 20% 6%;
+    --accent-glow: 140 100% 70%;
+    --accent-dim: 140 60% 40%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Warning/Alert Neon Orange */
+    --warning: 30 100% 60%;
+    --warning-foreground: 220 20% 6%;
+    --warning-glow: 30 100% 70%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Destructive Neon Red */
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 220 20% 6%;
+    --destructive-glow: 0 100% 70%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Muted/Subdued */
+    --muted: 220 15% 15%;
+    --muted-foreground: 210 20% 70%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders & Inputs */
+    --border: 220 15% 20%;
+    --input: 220 15% 15%;
+    --ring: 200 100% 60%;
 
-    --radius: 0.5rem;
+    /* Drone Swarm Specific Colors */
+    --swarm-alpha: 200 100% 60%;      /* Blue swarm */
+    --swarm-beta: 280 100% 70%;       /* Purple swarm */
+    --swarm-gamma: 140 100% 60%;      /* Green swarm */
+    --swarm-delta: 30 100% 60%;       /* Orange swarm */
+    --swarm-epsilon: 0 100% 60%;      /* Red swarm */
 
-    --sidebar-background: 0 0% 98%;
+    /* Task State Colors */
+    --task-idle: 210 20% 70%;
+    --task-patrol: 200 80% 60%;
+    --task-search: 280 80% 70%;
+    --task-rescue: 30 90% 60%;
+    --task-attack: 0 90% 60%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Battery Level Colors */
+    --battery-high: 140 100% 60%;     /* Green */
+    --battery-medium: 50 100% 60%;    /* Yellow */
+    --battery-low: 30 100% 60%;       /* Orange */
+    --battery-critical: 0 100% 60%;   /* Red */
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--secondary-glow)));
+    --gradient-surface: linear-gradient(180deg, hsl(var(--surface)), hsl(var(--background)));
+    --gradient-neon: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Shadows & Glows */
+    --shadow-neon: 0 0 20px hsl(var(--primary) / 0.5);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
+    --shadow-elevated: 0 8px 32px hsl(220 20% 0% / 0.6);
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    /* Animation Values */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --pulse-duration: 2s;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --radius: 0.75rem;
+    --radius-lg: 1rem;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  /* Custom animations and utilities */
+  .glow {
+    box-shadow: var(--shadow-glow);
+  }
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+  .neon-glow {
+    box-shadow: var(--shadow-neon);
+  }
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+  .pulse-neon {
+    animation: pulse-neon var(--pulse-duration) ease-in-out infinite alternate;
+  }
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+  @keyframes pulse-neon {
+    from {
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.5), 0 0 10px hsl(var(--primary) / 0.5), 0 0 15px hsl(var(--primary) / 0.5);
+    }
+    to {
+      box-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 20px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.8);
+    }
+  }
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  .grid-pattern {
+    background-image: 
+      linear-gradient(rgba(200, 200, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200, 200, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 }
 
