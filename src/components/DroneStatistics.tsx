@@ -1,241 +1,174 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { DroneData, SwarmID, TaskType } from '@/types/drone';
-import { Battery, Activity, Target, Users, AlertTriangle } from 'lucide-react';
+import { DroneSwarmDataset } from '@/types/drone';
+import { getDronesAtTime } from '@/data/realDataParser';
+import { Battery, Users, Activity, Target } from 'lucide-react';
 
 interface DroneStatisticsProps {
-  drones: DroneData[];
-  className?: string;
+  dataset: DroneSwarmDataset;
+  currentTime: string;  
+  selectedDrone?: number | null;
 }
 
-export function DroneStatistics({ drones, className }: DroneStatisticsProps) {
-  // Calculate statistics
-  const totalDrones = drones.length;
-  const avgBattery = drones.reduce((sum, drone) => sum + drone.batteryPercentage, 0) / totalDrones;
+export function DroneStatistics({ dataset, currentTime, selectedDrone }: DroneStatisticsProps) {
+  // Calculate statistics for current time
+  const currentDrones = getDronesAtTime(dataset, currentTime);
+  const activeDrones = currentDrones.length;
+  const avgBattery = activeDrones > 0 ? currentDrones.reduce((sum, drone) => sum + drone.batteryPercentage, 0) / activeDrones : 0;
   
-  // Count by swarm
-  const swarmCounts = drones.reduce((acc, drone) => {
-    acc[drone.swarmId] = (acc[drone.swarmId] || 0) + 1;
+  // Count by swarm (only positive swarm IDs)
+  const swarmStats = currentDrones.reduce((acc, drone) => {
+    if (drone.swarmId >= 0) {
+      acc[drone.swarmId] = (acc[drone.swarmId] || 0) + 1;
+    }
     return acc;
-  }, {} as Record<SwarmID, number>);
+  }, {} as Record<number, number>);
   
-  // Count by task
-  const taskCounts = drones.reduce((acc, drone) => {
-    acc[drone.taskId] = (acc[drone.taskId] || 0) + 1;
+  // Count by task (only positive task IDs)
+  const taskStats = currentDrones.reduce((acc, drone) => {
+    if (drone.taskId >= 0) {
+      acc[drone.taskId] = (acc[drone.taskId] || 0) + 1;
+    }
     return acc;
-  }, {} as Record<TaskType, number>);
+  }, {} as Record<number, number>);
   
-  // Battery level distribution
-  const batteryLevels = {
-    critical: drones.filter(d => d.batteryPercentage < 20).length,
-    low: drones.filter(d => d.batteryPercentage >= 20 && d.batteryPercentage < 50).length,
-    medium: drones.filter(d => d.batteryPercentage >= 50 && d.batteryPercentage < 80).length,
-    high: drones.filter(d => d.batteryPercentage >= 80).length,
-  };
-  
-  // Activity metrics
-  const avgVelocity = drones.reduce((sum, drone) => {
+  // Count by state
+  const stateStats = currentDrones.reduce((acc, drone) => {
+    acc[drone.state] = (acc[drone.state] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Calculate average velocity
+  const avgVelocity = activeDrones > 0 ? currentDrones.reduce((sum, drone) => {
     const speed = Math.sqrt(drone.velocity.x ** 2 + drone.velocity.y ** 2 + drone.velocity.z ** 2);
     return sum + speed;
-  }, 0) / totalDrones;
-  
-  const avgDetectionRange = drones.reduce((sum, drone) => sum + drone.detectionRange, 0) / totalDrones;
-  
-  const swarmColors = {
-    alpha: 'bg-swarm-alpha',
-    beta: 'bg-swarm-beta', 
-    gamma: 'bg-swarm-gamma',
-    delta: 'bg-swarm-delta',
-    epsilon: 'bg-swarm-epsilon'
-  };
-  
+  }, 0) / activeDrones : 0;
+
   return (
-    <div className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Total Drones */}
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Drones</p>
-                <p className="text-2xl font-bold text-primary">{totalDrones}</p>
-              </div>
-              <Users className="w-8 h-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Average Battery */}
-        <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Battery</p>
-                <p className="text-2xl font-bold text-accent">{avgBattery.toFixed(1)}%</p>
-              </div>
-              <Battery className="w-8 h-8 text-accent" />
-            </div>
-            <Progress value={avgBattery} className="h-2" />
-          </CardContent>
-        </Card>
-
-        {/* Average Speed */}
-        <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Speed</p>
-                <p className="text-2xl font-bold text-secondary">{avgVelocity.toFixed(1)}</p>
-              </div>
-              <Activity className="w-8 h-8 text-secondary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Detection Range */}
-        <Card className="bg-gradient-to-br from-warning/10 to-warning/5 border-warning/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Range</p>
-                <p className="text-2xl font-bold text-warning">{avgDetectionRange.toFixed(1)}</p>
-              </div>
-              <Target className="w-8 h-8 text-warning" />
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      {/* Key Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+          <div className="text-2xl font-bold text-primary">{activeDrones}</div>
+          <div className="text-sm text-muted-foreground">Active Drones</div>
+        </div>
+        <div className="bg-secondary/10 rounded-lg p-3 border border-secondary/20">
+          <div className="text-2xl font-bold text-secondary">{Object.keys(swarmStats).length}</div>
+          <div className="text-sm text-muted-foreground">Active Swarms</div>
+        </div>
+        <div className="bg-accent/10 rounded-lg p-3 border border-accent/20">
+          <div className="text-2xl font-bold text-accent">{Object.keys(taskStats).length}</div>
+          <div className="text-sm text-muted-foreground">Active Tasks</div>
+        </div>
+        <div className={`rounded-lg p-3 border ${
+          avgBattery > 50 ? 'bg-green-500/10 border-green-500/20' : 
+          avgBattery > 20 ? 'bg-yellow-500/10 border-yellow-500/20' : 
+          'bg-red-500/10 border-red-500/20'
+        }`}>
+          <div className={`text-2xl font-bold ${
+            avgBattery > 50 ? 'text-green-400' : 
+            avgBattery > 20 ? 'text-yellow-400' : 
+            'text-red-400'
+          }`}>
+            {avgBattery.toFixed(1)}%
+          </div>
+          <div className="text-sm text-muted-foreground">Avg Battery</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Swarm Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Swarm Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Object.entries(swarmCounts).map(([swarmId, count]) => (
-                <div key={swarmId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${swarmColors[swarmId as SwarmID]}`} />
-                    <span className="font-medium capitalize">{swarmId}</span>
-                  </div>
-                  <Badge variant="outline">{count} drones</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Task Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5" />
-              Task Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Object.entries(taskCounts).map(([taskId, count]) => (
-                <div key={taskId} className="flex items-center justify-between">
-                  <span className="font-medium capitalize">{taskId}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 bg-muted rounded-full h-2">
-                      <div 
-                        className="h-2 bg-primary rounded-full" 
-                        style={{ width: `${(count / totalDrones) * 100}%` }}
-                      />
-                    </div>
-                    <Badge variant="outline">{count}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Battery Health */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Battery className="w-5 h-5" />
-              Battery Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Critical (&lt;20%)</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-battery-critical rounded-full" />
-                  <Badge variant={batteryLevels.critical > 0 ? "destructive" : "outline"}>
-                    {batteryLevels.critical}
-                  </Badge>
-                </div>
+      {/* Distribution Stats */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-3 text-primary">Swarm Distribution</h3>
+          <div className="space-y-2">
+            {Object.entries(swarmStats).map(([swarm, count]) => (
+              <div key={swarm} className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                <span>Swarm {swarm}</span>
+                <span className="font-mono text-sm">{count} drones</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Low (20-50%)</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-battery-low rounded-full" />
-                  <Badge variant="outline">{batteryLevels.low}</Badge>
-                </div>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-semibold mb-3 text-secondary">Task Distribution</h3>
+          <div className="space-y-2">
+            {Object.entries(taskStats).map(([task, count]) => (
+              <div key={task} className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                <span>Task {task}</span>
+                <span className="font-mono text-sm">{count} drones</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Medium (50-80%)</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-battery-medium rounded-full" />
-                  <Badge variant="outline">{batteryLevels.medium}</Badge>
-                </div>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-semibold mb-3 text-accent">State Distribution</h3>
+          <div className="space-y-2">
+            {Object.entries(stateStats).map(([state, count]) => (
+              <div key={state} className="flex justify-between items-center p-2 bg-muted/20 rounded">
+                <span className="text-xs">{state}</span>
+                <span className="font-mono text-sm">{count}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">High (80%+)</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-battery-high rounded-full" />
-                  <Badge variant="outline">{batteryLevels.high}</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* System Alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              System Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {batteryLevels.critical > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/20 rounded">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  <span className="text-sm">{batteryLevels.critical} drone(s) critically low battery</span>
-                </div>
-              )}
-              {batteryLevels.low > 5 && (
-                <div className="flex items-center gap-2 p-2 bg-warning/10 border border-warning/20 rounded">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
-                  <span className="text-sm">{batteryLevels.low} drone(s) need charging soon</span>
-                </div>
-              )}
-              {batteryLevels.critical === 0 && batteryLevels.low <= 5 && (
-                <div className="flex items-center gap-2 p-2 bg-accent/10 border border-accent/20 rounded">
-                  <div className="w-4 h-4 bg-accent rounded-full" />
-                  <span className="text-sm text-accent">All systems operating normally</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Performance Metrics */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-muted/10 rounded-lg p-4 border border-muted/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="h-4 w-4 text-secondary" />
+            <span className="text-sm font-medium">Average Velocity</span>
+          </div>
+          <div className="text-xl font-bold text-secondary">{avgVelocity.toFixed(2)} m/s</div>
+        </div>
+        
+        <div className="bg-muted/10 rounded-lg p-4 border border-muted/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="h-4 w-4 text-warning" />
+            <span className="text-sm font-medium">Detection Coverage</span>
+          </div>
+          <div className="text-xl font-bold text-warning">
+            {currentDrones.length > 0 ? currentDrones[0].detectionRange : 0} m
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Drone Details */}
+      {selectedDrone && (
+        <div className="bg-card/50 rounded-lg p-4 border border-primary/30">
+          <h3 className="text-lg font-semibold mb-3 text-primary">Selected Drone #{selectedDrone}</h3>
+          {(() => {
+            const drone = currentDrones.find(d => d.droneId === selectedDrone);
+            if (!drone) return <p className="text-muted-foreground">Drone not active at current time</p>;
+            
+            return (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Position</div>
+                  <div className="font-mono">
+                    ({drone.position.x.toFixed(1)}, {drone.position.y.toFixed(1)}, {drone.position.z.toFixed(1)})
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">State</div>
+                  <div className="font-medium">{drone.state}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Battery</div>
+                  <div className="font-mono">{drone.batteryPercentage}%</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Swarm</div>
+                  <div className="font-mono">{drone.swarmId >= 0 ? `Swarm ${drone.swarmId}` : 'No Swarm'}</div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }
