@@ -4,7 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { SwarmID, TaskType, DroneState, VisualizationFilters } from '@/types/drone';
+import { SwarmID, TaskID, DroneState, VisualizationFilters } from '@/types/drone';
 import { cn } from '@/lib/utils';
 
 interface ControlPanelProps {
@@ -14,19 +14,24 @@ interface ControlPanelProps {
 }
 
 const swarmOptions: { id: SwarmID; label: string; color: string }[] = [
-  { id: 'alpha', label: 'Alpha', color: 'bg-swarm-alpha' },
-  { id: 'beta', label: 'Beta', color: 'bg-swarm-beta' },
-  { id: 'gamma', label: 'Gamma', color: 'bg-swarm-gamma' },
-  { id: 'delta', label: 'Delta', color: 'bg-swarm-delta' },
-  { id: 'epsilon', label: 'Epsilon', color: 'bg-swarm-epsilon' },
+  { id: -1, label: 'No Swarm', color: 'bg-muted' },
+  { id: 1, label: 'Swarm 1', color: 'bg-swarm-alpha' },
+  { id: 2, label: 'Swarm 2', color: 'bg-swarm-beta' },
 ];
 
-const taskOptions: { id: TaskType; label: string; color: string }[] = [
-  { id: 'idle', label: 'Idle', color: 'bg-task-idle' },
-  { id: 'patrol', label: 'Patrol', color: 'bg-task-patrol' },
-  { id: 'search', label: 'Search', color: 'bg-task-search' },
-  { id: 'rescue', label: 'Rescue', color: 'bg-task-rescue' },
-  { id: 'attack', label: 'Attack', color: 'bg-task-attack' },
+const taskOptions: { id: TaskID; label: string; color: string }[] = [
+  { id: -1, label: 'No Task', color: 'bg-muted' },
+  { id: 1, label: 'Task 1', color: 'bg-task-patrol' },
+  { id: 2, label: 'Task 2', color: 'bg-task-search' },
+];
+
+const stateOptions: { id: DroneState; label: string; color: string }[] = [
+  { id: 'Taking Off', label: 'Taking Off', color: 'bg-yellow-500' },
+  { id: 'Entering Swarm', label: 'Entering Swarm', color: 'bg-green-500' },
+  { id: 'Hovering', label: 'Hovering', color: 'bg-blue-500' },
+  { id: 'Passing By', label: 'Passing By', color: 'bg-orange-500' },
+  { id: 'Attacking', label: 'Attacking', color: 'bg-red-500' },
+  { id: 'Parachute Deployment', label: 'Parachute Deployment', color: 'bg-purple-500' },
 ];
 
 export function ControlPanel({ filters, onFiltersChange, className }: ControlPanelProps) {
@@ -41,11 +46,18 @@ export function ControlPanel({ filters, onFiltersChange, className }: ControlPan
     updateFilters({ selectedSwarms: newSwarms });
   };
 
-  const toggleTask = (taskId: TaskType) => {
+  const toggleTask = (taskId: TaskID) => {
     const newTasks = filters.selectedTasks.includes(taskId)
       ? filters.selectedTasks.filter(id => id !== taskId)
       : [...filters.selectedTasks, taskId];
     updateFilters({ selectedTasks: newTasks });
+  };
+
+  const toggleState = (state: DroneState) => {
+    const newStates = filters.selectedStates.includes(state)
+      ? filters.selectedStates.filter(s => s !== state)
+      : [...filters.selectedStates, state];
+    updateFilters({ selectedStates: newStates });
   };
 
   return (
@@ -64,12 +76,12 @@ export function ControlPanel({ filters, onFiltersChange, className }: ControlPan
             {swarmOptions.map(swarm => (
               <div key={swarm.id} className="flex items-center space-x-2">
                 <Checkbox
-                  id={swarm.id}
+                  id={`swarm-${swarm.id}`}
                   checked={filters.selectedSwarms.includes(swarm.id)}
                   onCheckedChange={() => toggleSwarm(swarm.id)}
                 />
                 <label
-                  htmlFor={swarm.id}
+                  htmlFor={`swarm-${swarm.id}`}
                   className="flex items-center space-x-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                 >
                   <div className={cn("w-3 h-3 rounded-full", swarm.color)} />
@@ -87,16 +99,39 @@ export function ControlPanel({ filters, onFiltersChange, className }: ControlPan
             {taskOptions.map(task => (
               <div key={task.id} className="flex items-center space-x-2">
                 <Checkbox
-                  id={task.id}
+                  id={`task-${task.id}`}
                   checked={filters.selectedTasks.includes(task.id)}
                   onCheckedChange={() => toggleTask(task.id)}
                 />
                 <label
-                  htmlFor={task.id}
+                  htmlFor={`task-${task.id}`}
                   className="flex items-center space-x-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                 >
                   <div className={cn("w-3 h-3 rounded", task.color)} />
-                  <span className="capitalize">{task.label}</span>
+                  <span>{task.label}</span>
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* State Selection */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">States</h3>
+          <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+            {stateOptions.map(state => (
+              <div key={state.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`state-${state.id}`}
+                  checked={filters.selectedStates.includes(state.id)}
+                  onCheckedChange={() => toggleState(state.id)}
+                />
+                <label
+                  htmlFor={`state-${state.id}`}
+                  className="flex items-center space-x-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  <div className={cn("w-3 h-3 rounded", state.color)} />
+                  <span className="text-xs">{state.label}</span>
                 </label>
               </div>
             ))}
@@ -167,7 +202,8 @@ export function ControlPanel({ filters, onFiltersChange, className }: ControlPan
             <button
               onClick={() => updateFilters({
                 selectedSwarms: swarmOptions.map(s => s.id),
-                selectedTasks: taskOptions.map(t => t.id)
+                selectedTasks: taskOptions.map(t => t.id),
+                selectedStates: stateOptions.map(s => s.id)
               })}
               className="px-3 py-2 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
             >
@@ -176,7 +212,8 @@ export function ControlPanel({ filters, onFiltersChange, className }: ControlPan
             <button
               onClick={() => updateFilters({
                 selectedSwarms: [],
-                selectedTasks: []
+                selectedTasks: [],
+                selectedStates: []
               })}
               className="px-3 py-2 text-xs bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
             >
