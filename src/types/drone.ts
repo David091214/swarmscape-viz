@@ -19,23 +19,29 @@ export interface DroneOrientation {
 }
 
 export type DroneState = 
-  | 'Taking Off'
-  | 'Entering Swarm'
-  | 'Hovering'
-  | 'Passing By'
-  | 'Attacking'
-  | 'Parachute Deployment';
+  | 'idle' 
+  | 'patrol' 
+  | 'search' 
+  | 'rescue' 
+  | 'attack' 
+  | 'charging' 
+  | 'maintenance' 
+  | 'emergency';
 
-export type TaskID = number; // -1 for no task, positive numbers for task assignments
-export type TaskType = TaskID; // For compatibility
+export type TaskType = 
+  | 'idle'
+  | 'patrol'
+  | 'search'
+  | 'rescue'
+  | 'attack';
 
-export type SwarmID = number; // -1 for no swarm, positive numbers for swarm assignments
+export type SwarmID = 'alpha' | 'beta' | 'gamma' | 'delta' | 'epsilon';
 
 export interface DroneData {
-  droneId: number;
-  timePoint: string;
+  droneId: string;
+  timePoint: number;
   swarmId: SwarmID;
-  taskId: TaskID;
+  taskId: TaskType;
   state: DroneState;
   position: DronePosition;
   velocity: DroneVelocity;
@@ -45,14 +51,13 @@ export interface DroneData {
 }
 
 export interface DroneSwarmDataset {
-  timePoints: string[];
+  timePoints: number[];
   drones: DroneData[];
   metadata: {
     totalDrones: number;
     totalTimePoints: number;
-    swarmCounts: Record<number, number>;
-    taskCounts: Record<number, number>;
-    stateCounts: Record<DroneState, number>;
+    swarmCounts: Record<SwarmID, number>;
+    taskCounts: Record<TaskType, number>;
     boundingBox: {
       min: DronePosition;
       max: DronePosition;
@@ -63,7 +68,7 @@ export interface DroneSwarmDataset {
 // Visualization filters and controls
 export interface VisualizationFilters {
   selectedSwarms: SwarmID[];
-  selectedTasks: TaskID[];
+  selectedTasks: TaskType[];
   selectedStates: DroneState[];
   batteryRange: [number, number];
   showTrajectories: boolean;
@@ -72,8 +77,8 @@ export interface VisualizationFilters {
 }
 
 export interface TimelineState {
-  currentTime: string;
+  currentTime: number;
   isPlaying: boolean;
   playbackSpeed: number;
-  timeRange: [string, string];
+  timeRange: [number, number];
 }

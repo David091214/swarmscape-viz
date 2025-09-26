@@ -1,228 +1,240 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, Line } from '@react-three/drei';
+import { OrbitControls, Text, Line, Sphere, Box } from '@react-three/drei';
 import * as THREE from 'three';
-import { DroneData, DroneSwarmDataset, SwarmID } from '../types/drone';
-import { getDronesAtTime, getDroneTrajectory } from '@/data/realDataParser';
+import { DroneData, SwarmID, TaskType } from '../types/drone';
 
 interface DroneVisualization3DProps {
-  dataset: DroneSwarmDataset;
-  currentTime: string;
-  showTrajectories: boolean;
-  selectedSwarm?: SwarmID;
-  onDroneSelect?: (droneId: number) => void;
+  drones: DroneData[];
+  showTrajectories?: boolean;
+  showDetectionRanges?: boolean;
+  showVelocityVectors?: boolean;
+  className?: string;
 }
 
-// Get swarm color based on swarm ID
-const getSwarmColor = (swarmId: SwarmID): string => {
-  if (swarmId === -1) return '#FFFFFF'; // No swarm - white
-  if (swarmId === 1) return '#00BFFF';   // Swarm 1 - cyan
-  if (swarmId === 2) return '#9932CC';   // Swarm 2 - purple
-  return '#00FF7F'; // Default - green
+// Color mapping for swarms
+const swarmColors = {
+  alpha: '#0ea5e9',    // Blue
+  beta: '#a855f7',     // Purple
+  gamma: '#22c55e',    // Green
+  delta: '#f59e0b',    // Orange
+  epsilon: '#ef4444'   // Red
 };
 
-// Get state color based on drone state
-const getStateColor = (state: string): string => {
-  switch (state) {
-    case 'Taking Off': return '#FFD700';
-    case 'Entering Swarm': return '#32CD32';
-    case 'Hovering': return '#00BFFF';
-    case 'Passing By': return '#FF6347';
-    case 'Attacking': return '#FF4500';
-    case 'Parachute Deployment': return '#DA70D6';
-    default: return '#FFFFFF';
-  }
+// Color mapping for tasks
+const taskColors = {
+  idle: '#64748b',
+  patrol: '#0ea5e9',
+  search: '#a855f7',
+  rescue: '#f59e0b',
+  attack: '#ef4444'
 };
 
-// Drone component that represents a single drone in 3D space
-const Drone: React.FC<{ 
-  drone: DroneData; 
-  isSelected: boolean; 
-  onClick: () => void;
-}> = ({ drone, isSelected, onClick }) => {
+// Individual drone component
+function DroneModel({ drone, showDetectionRange, showVelocityVector }: {
+  drone: DroneData;
+  showDetectionRange?: boolean;
+  showVelocityVector?: boolean;
+}) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const swarmColor = swarmColors[drone.swarmId];
+  const taskColor = taskColors[drone.taskId];
   
   // Animate drone rotation based on orientation
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.x = (drone.orientation.pitch * Math.PI) / 180;
-      meshRef.current.rotation.y = (drone.orientation.yaw * Math.PI) / 180;
-      meshRef.current.rotation.z = (drone.orientation.roll * Math.PI) / 180;
+      meshRef.current.rotation.x = THREE.MathUtils.degToRad(drone.orientation.pitch);
+      meshRef.current.rotation.y = THREE.MathUtils.degToRad(drone.orientation.yaw);
+      meshRef.current.rotation.z = THREE.MathUtils.degToRad(drone.orientation.roll);
     }
   });
 
-  const swarmColor = getSwarmColor(drone.swarmId);
-  const stateColor = getStateColor(drone.state);
+  // Battery-based opacity
+  const opacity = Math.max(0.3, drone.batteryPercentage / 100);
   
   return (
     <group position={[drone.position.x, drone.position.y, drone.position.z]}>
-      {/* Drone body */}
-      <mesh ref={meshRef} onClick={onClick}>
-        <boxGeometry args={[2, 0.5, 2]} />
-        <meshStandardMaterial 
+      {/* Main drone body */}
+      <Box
+        ref={meshRef}
+        args={[1, 0.3, 1]}
+        position={[0, 0, 0]}
+      >
+        <meshStandardMaterial
           color={swarmColor}
+          transparent
+          opacity={opacity}
           emissive={swarmColor}
-          emissiveIntensity={isSelected ? 0.5 : 0.2}
+          emissiveIntensity={0.2}
         />
-      </mesh>
+      </Box>
       
-      {/* State indicator sphere */}
-      <mesh position={[0, 1, 0]}>
-        <sphereGeometry args={[0.3]} />
-        <meshStandardMaterial 
-          color={stateColor}
-          emissive={stateColor}
-          emissiveIntensity={0.4}
+      {/* Task indicator (small sphere above drone) */}
+      <Sphere args={[0.2]} position={[0, 0.8, 0]}>
+        <meshStandardMaterial
+          color={taskColor}
+          transparent
+          opacity={0.8}
+          emissive={taskColor}
+          emissiveIntensity={0.5}
         />
-      </mesh>
+      </Sphere>
+      
+      {/* Battery level indicator */}
+      <Box
+        args={[0.2, 0.1, 1.2]}
+        position={[0.7, 0, 0]}
+      >
+        <meshStandardMaterial
+          color={drone.batteryPercentage > 50 ? '#22c55e' : 
+                drone.batteryPercentage > 25 ? '#f59e0b' : '#ef4444'}
+          transparent
+          opacity={0.7}
+        />
+      </Box>
       
       {/* Detection range visualization */}
-      <mesh position={[0, -1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[drone.detectionRange * 0.8, drone.detectionRange, 32]} />
-        <meshBasicMaterial 
-          color={swarmColor} 
-          transparent 
-          opacity={0.1}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      {showDetectionRange && (
+        <mesh>
+          <sphereGeometry args={[drone.detectionRange, 16, 8]} />
+          <meshBasicMaterial
+            color={swarmColor}
+            transparent
+            opacity={0.05}
+            wireframe
+          />
+        </mesh>
+      )}
       
       {/* Velocity vector */}
-      <arrowHelper 
-        args={[
-          new THREE.Vector3(drone.velocity.x, drone.velocity.y, drone.velocity.z).normalize(),
-          new THREE.Vector3(0, 0, 0),
-          Math.sqrt(drone.velocity.x ** 2 + drone.velocity.y ** 2 + drone.velocity.z ** 2) * 2,
-          swarmColor,
-          2,
-          1
-        ]}
-      />
-      
-      {/* Battery indicator */}
-      <Text
-        position={[0, 3, 0]}
-        fontSize={1}
-        color={drone.batteryPercentage > 20 ? '#00FF00' : '#FF0000'}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {drone.batteryPercentage}%
-      </Text>
+      {showVelocityVector && (
+        <Line
+          points={[
+            [0, 0, 0],
+            [drone.velocity.x * 2, drone.velocity.y * 2, drone.velocity.z * 2]
+          ]}
+          color="#ffffff"
+          transparent
+          opacity={0.6}
+          lineWidth={2}
+        />
+      )}
       
       {/* Drone ID label */}
       <Text
-        position={[0, -3, 0]}
-        fontSize={0.8}
-        color={swarmColor}
+        position={[0, -1, 0]}
+        fontSize={0.3}
+        color="#ffffff"
         anchorX="center"
         anchorY="middle"
       >
-        D{drone.droneId}
+        {drone.droneId}
       </Text>
     </group>
   );
-};
+}
+
+// Grid floor component
+function GridFloor() {
+  const gridSize = 200;
+  const divisions = 20;
+  
+  return (
+    <group position={[0, -5, 0]}>
+      <gridHelper args={[gridSize, divisions, '#1e293b', '#0f172a']} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[gridSize, gridSize]} />
+        <meshBasicMaterial
+          color="#0f172a"
+          transparent
+          opacity={0.1}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// Coordinate axes
+function CoordinateAxes() {
+  return (
+    <group>
+      {/* X Axis - Red */}
+      <Line
+        points={[[-50, 0, 0], [50, 0, 0]]}
+        color="#ef4444"
+        lineWidth={2}
+      />
+      <Text position={[52, 0, 0]} fontSize={1} color="#ef4444">X</Text>
+      
+      {/* Y Axis - Green */}
+      <Line
+        points={[[0, -5, 0], [0, 50, 0]]}
+        color="#22c55e"
+        lineWidth={2}
+      />
+      <Text position={[0, 52, 0]} fontSize={1} color="#22c55e">Y</Text>
+      
+      {/* Z Axis - Blue */}
+      <Line
+        points={[[0, 0, -50], [0, 0, 50]]}
+        color="#0ea5e9"
+        lineWidth={2}
+      />
+      <Text position={[0, 0, 52]} fontSize={1} color="#0ea5e9">Z</Text>
+    </group>
+  );
+}
 
 export function DroneVisualization3D({
-  dataset,
-  currentTime,
-  showTrajectories,
-  selectedSwarm,
-  onDroneSelect
+  drones,
+  showTrajectories = false,
+  showDetectionRanges = false,
+  showVelocityVectors = false,
+  className
 }: DroneVisualization3DProps) {
-  const [selectedDroneId, setSelectedDroneId] = useState<number | null>(null);
-
-  // Get current drones filtered by time and optionally by swarm
-  const currentDrones = getDronesAtTime(dataset, currentTime).filter(drone => 
-    selectedSwarm === undefined || drone.swarmId === selectedSwarm
-  );
-
-  // Handle drone selection
-  const handleDroneClick = (droneId: number) => {
-    setSelectedDroneId(droneId);
-    onDroneSelect?.(droneId);
-  };
-
+  
   return (
-    <div className="w-full h-full">
+    <div className={className}>
       <Canvas
-        camera={{ position: [100, 80, 100], fov: 60 }}
-        style={{ 
-          background: 'radial-gradient(circle at center, hsl(var(--surface)) 0%, hsl(var(--background)) 70%)'
-        }}
+        camera={{ position: [50, 40, 50], fov: 60 }}
+        style={{ background: 'radial-gradient(circle at center, #1e293b 0%, #0f172a 70%)' }}
       >
-        {/* Lighting setup */}
-        <ambientLight intensity={0.4} />
+        {/* Lighting */}
+        <ambientLight intensity={0.3} />
         <directionalLight
-          position={[50, 50, 25]}
+          position={[10, 10, 5]}
           intensity={0.8}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <pointLight position={[0, 100, 0]} intensity={0.6} color="hsl(var(--primary))" />
+        <pointLight position={[0, 50, 0]} intensity={0.5} color="#0ea5e9" />
         
-        {/* Camera controls */}
+        {/* Controls */}
         <OrbitControls
           enablePan={true}
           enableZoom={true}
           enableRotate={true}
-          minDistance={20}
-          maxDistance={300}
+          minDistance={10}
+          maxDistance={200}
         />
         
-        {/* Grid floor */}
-        <gridHelper args={[200, 20, 'hsl(var(--border))', 'hsl(var(--muted))']} position={[0, -5, 0]} />
+        {/* Scene elements */}
+        <GridFloor />
+        <CoordinateAxes />
         
-        {/* Coordinate axes */}
-        <group>
-          <Line
-            points={[[-100, 0, 0], [100, 0, 0]]}
-            color="hsl(var(--destructive))"
-            lineWidth={2}
-          />
-          <Line
-            points={[[0, 0, 0], [0, 100, 0]]}
-            color="hsl(var(--accent))"
-            lineWidth={2}
-          />
-          <Line
-            points={[[0, 0, -100], [0, 0, 100]]}
-            color="hsl(var(--primary))"
-            lineWidth={2}
-          />
-        </group>
-        
-        {/* Render current drones */}
-        {currentDrones.map((drone) => (
-          <Drone
+        {/* Render all drones */}
+        {drones.map((drone) => (
+          <DroneModel
             key={`${drone.droneId}-${drone.timePoint}`}
             drone={drone}
-            isSelected={selectedDroneId === drone.droneId}
-            onClick={() => handleDroneClick(drone.droneId)}
+            showDetectionRange={showDetectionRanges}
+            showVelocityVector={showVelocityVectors}
           />
         ))}
         
-        {/* Trajectory visualization */}
-        {showTrajectories && selectedDroneId && (
-          (() => {
-            const trajectory = getDroneTrajectory(dataset, selectedDroneId);
-            const points = trajectory.map(d => [d.position.x, d.position.y, d.position.z] as [number, number, number]);
-            return points.length > 1 ? (
-              <Line
-                points={points}
-                color="hsl(var(--secondary))"
-                lineWidth={3}
-                transparent
-                opacity={0.7}
-              />
-            ) : null;
-          })()
-        )}
-        
-        {/* Environment fog */}
-        <fog attach="fog" args={['hsl(var(--background))', 100, 400]} />
+        {/* Environment fog for depth */}
+        <fog attach="fog" args={['#0f172a', 50, 300]} />
       </Canvas>
     </div>
   );
