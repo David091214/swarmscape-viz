@@ -1,6 +1,6 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, Line, Sphere, Box } from '@react-three/drei';
+import { OrbitControls, Text, Line, Sphere, Box, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { DroneData, SwarmID, TaskType } from '../types/drone';
 
@@ -10,6 +10,12 @@ interface DroneVisualization3DProps {
   showDetectionRanges?: boolean;
   showVelocityVectors?: boolean;
   className?: string;
+}
+
+// Environment Model Component
+function EnvironmentModel() {
+  const { scene } = useGLTF('/environment.glb');
+  return <primitive object={scene} scale={[100, 100, 100]} position={[0, -5, 0]} />;
 }
 
 // Color mapping for swarms
@@ -199,6 +205,9 @@ export function DroneVisualization3D({
         camera={{ position: [50, 40, 50], fov: 60 }}
         style={{ background: 'radial-gradient(circle at center, #1e293b 0%, #0f172a 70%)' }}
       >
+        <Suspense fallback={null}>
+          <EnvironmentModel />
+        </Suspense>
         {/* Lighting */}
         <ambientLight intensity={0.3} />
         <directionalLight
