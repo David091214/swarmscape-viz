@@ -163,30 +163,30 @@ function GridFloor() {
 // Coordinate axes
 function CoordinateAxes() {
   return (
-    <group>
+    <group position={[0, -5, 0]}>
       {/* X Axis - Red */}
       <Line
-        points={[[-50, 0, 0], [50, 0, 0]]}
+        points={[[-100, 0, 0], [100, 0, 0]]}
         color="#ef4444"
-        lineWidth={2}
+        lineWidth={3}
       />
-      <Text position={[52, 0, 0]} fontSize={1} color="#ef4444">X</Text>
+      <Text position={[105, 0, 0]} fontSize={3} color="#ef4444">X</Text>
       
       {/* Y Axis - Green */}
       <Line
-        points={[[0, -5, 0], [0, 50, 0]]}
+        points={[[0, 0, 0], [0, 100, 0]]}
         color="#22c55e"
-        lineWidth={2}
+        lineWidth={3}
       />
-      <Text position={[0, 52, 0]} fontSize={1} color="#22c55e">Y</Text>
+      <Text position={[0, 105, 0]} fontSize={3} color="#22c55e">Y</Text>
       
       {/* Z Axis - Blue */}
       <Line
-        points={[[0, 0, -50], [0, 0, 50]]}
+        points={[[0, 0, -100], [0, 0, 100]]}
         color="#0ea5e9"
-        lineWidth={2}
+        lineWidth={3}
       />
-      <Text position={[0, 0, 52]} fontSize={1} color="#0ea5e9">Z</Text>
+      <Text position={[0, 0, 105]} fontSize={3} color="#0ea5e9">Z</Text>
     </group>
   );
 }
